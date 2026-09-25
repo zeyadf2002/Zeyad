@@ -90,6 +90,49 @@ void main() {
     state.dispose();
   });
 
+  test('تسجيل شركة يبقيها بانتظار التوثيق', () async {
+    final backend = FakeBackend();
+    final state = AppState(backend: backend, uid: 'u3');
+    final c = state.registerCompany(
+      name: 'نقل الجنوب',
+      carrier: CarrierType.flatbed,
+      cities: ['أبها'],
+    );
+    expect(state.pendingCompany?.id, c.id);
+    expect(state.myCompany, isNull);
+    expect(backend.savedCompanies.single.verified, isFalse);
+    expect(backend.savedCompanies.single.ownerUid, 'u3');
+    expect(state.companies, isEmpty);
+    state.dispose();
+  });
+
+  test('التقييم بعد التسليم فقط، مرة واحدة، ويُحدّث متوسط الشركة', () {
+    final state = AppState();
+    final r = state.submitRequest(
+      from: 'الرياض',
+      to: 'جدة',
+      car: 'كامري',
+      carrier: CarrierType.open,
+      pickupDate: DateTime.now(),
+    );
+    final q = state.quotesFor(r.id).firstWhere((q) => q.companyId == 'c3');
+    state.book(r, q);
+    state.rate(r, stars: 1);
+    expect(state.ratings, isEmpty, reason: 'لم يُسلّم بعد');
+
+    for (var i = 0; i < 3; i++) {
+      state.advance(r);
+    }
+    final before = state.companyById('c3');
+    state.rate(r, stars: 5, comment: ' ممتاز ');
+    state.rate(r, stars: 1);
+    expect(state.ratings.single.stars, 5);
+    expect(state.ratings.single.comment, 'ممتاز');
+    final after = state.companyById('c3');
+    expect(after.reviewCount, before.reviewCount + 1);
+    expect(after.rating, (4.5 * 98 + 5) / 99);
+  });
+
   test('تحويل الرقم إلى الصيغة الدولية', () {
     const n = normalizeSaudiPhone;
     expect(n('0512345678'), '+966512345678');
@@ -149,4 +192,21 @@ class FakeBackend implements Backend {
 
   @override
   Future<void> saveQuote(Quote quote) async => savedQuotes.add(quote);
+
+  final owned = StreamController<List<Company>>.broadcast();
+  final ratings = StreamController<List<Rating>>.broadcast();
+  final savedCompanies = <Company>[];
+  final savedRatings = <Rating>[];
+
+  @override
+  Stream<List<Company>> watchOwnedCompanies(String uid) => owned.stream;
+
+  @override
+  Stream<List<Rating>> watchRatings() => ratings.stream;
+
+  @override
+  Future<void> saveCompany(Company company) async => savedCompanies.add(company);
+
+  @override
+  Future<void> saveRating(Rating rating) async => savedRatings.add(rating);
 }

@@ -12,7 +12,7 @@ import 'models.dart';
 class AppState extends ChangeNotifier {
   AppState({this.backend, this.uid = demoUid}) {
     if (backend == null) {
-      companies = _demoCompanies(uid);
+      _verified = _demoCompanies(uid);
       _seedDemo();
     } else {
       _listen();
@@ -35,7 +35,38 @@ class AppState extends ChangeNotifier {
 
   bool get isDemo => backend == null;
 
-  List<Company> companies = [];
+  List<Company> _verified = [];
+  List<Company> _owned = [];
+  List<Rating> ratings = [];
+
+  /// الشركات الموثّقة، وتقييمها يشمل تقييمات العملاء الجديدة.
+  List<Company> get companies => [for (final c in _verified) _withRatings(c)];
+
+  Company _withRatings(Company c) {
+    final mine = ratingsFor(c.id);
+    if (mine.isEmpty) return c;
+    final total = c.rating * c.reviewCount + mine.fold<int>(0, (s, r) => s + r.stars);
+    final count = c.reviewCount + mine.length;
+    return c.copyWith(rating: total / count, reviewCount: count);
+  }
+
+  List<Rating> ratingsFor(String companyId) =>
+      ratings.where((r) => r.companyId == companyId).toList();
+
+  Rating? ratingForRequest(String requestId) {
+    for (final r in ratings) {
+      if (r.requestId == requestId) return r;
+    }
+    return null;
+  }
+
+  /// شركة سجّلها المستخدم وما زالت بانتظار التوثيق.
+  Company? get pendingCompany {
+    for (final c in _owned) {
+      if (!c.verified) return c;
+    }
+    return null;
+  }
 
   /// الأحدث أولًا.
   List<TransportRequest> requests = [];
@@ -60,7 +91,7 @@ class AppState extends ChangeNotifier {
 
   String? get activeCompanyId => myCompany?.id;
 
-  Company companyById(String id) => companies.firstWhere(
+  Company companyById(String id) => [...companies, ..._owned].firstWhere(
         (c) => c.id == id,
         orElse: () => Company(
           id: id,
@@ -162,6 +193,52 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// طلب تسجيل شركة نقل. تبقى غير موثّقة حتى تراجعها الإدارة.
+  Company registerCompany({
+    required String name,
+    required CarrierType carrier,
+    required List<String> cities,
+  }) {
+    final company = Company(
+      id: _id('c'),
+      name: name,
+      carrier: carrier,
+      cities: cities,
+      rating: 0,
+      reviewCount: 0,
+      verified: false,
+      ownerUid: uid,
+    );
+    _owned = [..._owned, company];
+    backend?.saveCompany(company);
+    notifyListeners();
+    return company;
+  }
+
+  /// تقييم الشركة بعد تسليم السيارة. مرة واحدة لكل طلب.
+  void rate(TransportRequest request, {required int stars, String comment = ''}) {
+    final quote = request.bookedQuoteId == null ? null : _quotes[request.bookedQuoteId];
+    if (quote == null ||
+        request.status != OrderStatus.delivered ||
+        request.customerId != uid ||
+        ratingForRequest(request.id) != null ||
+        stars < 1 ||
+        stars > 5) {
+      return;
+    }
+    final rating = Rating(
+      requestId: request.id,
+      companyId: quote.companyId,
+      customerId: uid,
+      stars: stars,
+      comment: comment.trim(),
+      createdAt: DateTime.now(),
+    );
+    ratings = [rating, ...ratings];
+    backend?.saveRating(rating);
+    notifyListeners();
+  }
+
   void advance(TransportRequest request) {
     final next = request.status.index + 1;
     if (next < OrderStatus.values.length) {
@@ -174,7 +251,7 @@ class AppState extends ChangeNotifier {
   void _listen() {
     final b = backend!;
     _subs.add(b.watchCompanies().listen((list) {
-      companies = list;
+      _verified = list;
       _watchCompanyQuotes();
       notifyListeners();
     }));
@@ -183,6 +260,14 @@ class AppState extends ChangeNotifier {
       notifyListeners();
     }));
     _subs.add(b.watchQuotesForCustomer(uid).listen(_mergeQuotes));
+    _subs.add(b.watchOwnedCompanies(uid).listen((list) {
+      _owned = list;
+      notifyListeners();
+    }));
+    _subs.add(b.watchRatings().listen((list) {
+      ratings = list;
+      notifyListeners();
+    }));
   }
 
   void _watchCompanyQuotes() {

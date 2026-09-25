@@ -23,21 +23,10 @@ firebase deploy --only firestore:rules
 ```
 القواعد في `firestore.rules`: العميل يرى عروضه فقط، والشركة ترى عروضها فقط، ولا أحد يعدّل طلب غيره.
 
-## ٤. إضافة شركة نقل
-الشركات لا تسجّل نفسها بعد؛ تُضاف يدويًا من لوحة Firestore:
-- المجموعة: `companies`، ومستند جديد بالحقول:
+## ٤. توثيق شركات النقل
+صاحب الشركة يسجّل دخوله، ثم من **حسابي ← التحويل إلى وضع الشركة** يملأ نموذج تسجيل الشركة. تُحفظ الشركة في مجموعة `companies` وحقل `verified` فيها `false`، فلا تظهر للعملاء.
 
-| الحقل | النوع | مثال |
-|---|---|---|
-| name | string | الناقل السريع |
-| carrier | string | `enclosed` أو `open` أو `flatbed` |
-| cities | array | الرياض، جدة |
-| rating | number | 0 |
-| reviewCount | number | 0 |
-| verified | boolean | true |
-| ownerUid | string | معرّف حساب صاحب الشركة من **Authentication ← Users** |
-
-صاحب الشركة يسجّل دخوله برقمه أولًا، ثم تنسخ الـ UID الخاص به من صفحة Users وتضعه في `ownerUid`. بعدها يفتح له "وضع الشركة".
+للتوثيق: افتح **Firestore Database ← companies**، اختر مستند الشركة، وغيّر `verified` إلى `true`. بعدها تظهر للعملاء ويفتح لصاحبها وضع الشركة.
 
 ## ٥. للتجربة بدون رسائل SMS حقيقية
 في **Authentication ← Sign-in method ← Phone ← Phone numbers for testing** أضف رقمًا مثل `+966500000000` مع رمز `123456`.

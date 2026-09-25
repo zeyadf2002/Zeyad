@@ -76,7 +76,7 @@ class TrackingScreen extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           if (request.status == OrderStatus.delivered)
-            const AppCard(child: Text('تم تسليم سيارتك. شكرًا لاستخدامك التطبيق!'))
+            _RatingCard(request: request)
           else
             FilledButton(
               onPressed: () => state.advance(request),
@@ -161,6 +161,85 @@ class _StepRow extends StatelessWidget {
                 ],
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// تقييم الشركة بعد التسليم، أو التقييم الذي أرسله العميل.
+class _RatingCard extends StatefulWidget {
+  const _RatingCard({required this.request});
+
+  final TransportRequest request;
+
+  @override
+  State<_RatingCard> createState() => _RatingCardState();
+}
+
+class _RatingCardState extends State<_RatingCard> {
+  int _stars = 0;
+  final _comment = TextEditingController();
+
+  @override
+  void dispose() {
+    _comment.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final state = AppScope.of(context);
+    final existing = state.ratingForRequest(widget.request.id);
+    if (existing != null) {
+      return AppCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('شكرًا على تقييمك', style: TextStyle(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 4),
+            Text('★' * existing.stars, style: const TextStyle(color: AppColors.amberDeep, fontSize: 18)),
+            if (existing.comment.isNotEmpty) Text(existing.comment),
+          ],
+        ),
+      );
+    }
+    if (widget.request.customerId != state.uid) {
+      return const AppCard(child: Text('تم تسليم السيارة.'));
+    }
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text('تم تسليم سيارتك. كيف كانت الخدمة؟', style: TextStyle(fontWeight: FontWeight.w700)),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              for (var i = 1; i <= 5; i++)
+                IconButton(
+                  tooltip: '$i من 5',
+                  onPressed: () => setState(() => _stars = i),
+                  icon: Icon(
+                    i <= _stars ? Icons.star : Icons.star_border,
+                    color: AppColors.amberDeep,
+                    size: 32,
+                  ),
+                ),
+            ],
+          ),
+          TextField(
+            controller: _comment,
+            maxLines: 2,
+            decoration: const InputDecoration(hintText: 'تعليقك (اختياري)'),
+          ),
+          const SizedBox(height: 12),
+          FilledButton(
+            onPressed: _stars == 0
+                ? null
+                : () => state.rate(widget.request, stars: _stars, comment: _comment.text),
+            child: const Text('أرسل التقييم'),
           ),
         ],
       ),

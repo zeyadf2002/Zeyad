@@ -51,6 +51,17 @@ class Company {
 
   String get initial => name.substring(0, 1);
 
+  Company copyWith({double? rating, int? reviewCount}) => Company(
+        id: id,
+        name: name,
+        carrier: carrier,
+        cities: cities,
+        rating: rating ?? this.rating,
+        reviewCount: reviewCount ?? this.reviewCount,
+        verified: verified,
+        ownerUid: ownerUid,
+      );
+
   factory Company.fromMap(String id, Map<String, dynamic> m) => Company(
         id: id,
         name: m['name'] as String? ?? '',
@@ -160,5 +171,41 @@ class Quote {
         'companyId': companyId,
         'price': price,
         'days': days,
+      };
+}
+
+/// تقييم العميل للشركة بعد التسليم. معرّفه هو معرّف الطلب، فلكل طلب تقييم واحد.
+class Rating {
+  const Rating({
+    required this.requestId,
+    required this.companyId,
+    required this.customerId,
+    required this.stars,
+    required this.comment,
+    required this.createdAt,
+  });
+
+  final String requestId;
+  final String companyId;
+  final String customerId;
+  final int stars;
+  final String comment;
+  final DateTime createdAt;
+
+  factory Rating.fromMap(String id, Map<String, dynamic> m) => Rating(
+        requestId: id,
+        companyId: m['companyId'] as String? ?? '',
+        customerId: m['customerId'] as String? ?? '',
+        stars: (m['stars'] as num?)?.toInt() ?? 0,
+        comment: m['comment'] as String? ?? '',
+        createdAt: _date(m['createdAt']),
+      );
+
+  Map<String, dynamic> toMap() => {
+        'companyId': companyId,
+        'customerId': customerId,
+        'stars': stars,
+        'comment': comment,
+        'createdAt': createdAt.millisecondsSinceEpoch,
       };
 }

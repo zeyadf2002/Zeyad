@@ -14,10 +14,18 @@ service cloud.firestore {
         get(/databases/$(database)/documents/companies/$(companyId)).data.ownerUid == request.auth.uid;
     }
 
-    // الشركات: يقرؤها كل مستخدم مسجّل. الإضافة والتوثيق من لوحة Firebase فقط.
+    // الشركات: يقرؤها كل مستخدم مسجّل. أي مستخدم يسجّل شركة غير موثّقة باسمه،
+    // والتوثيق وتعديل البيانات من لوحة Firebase فقط.
     match /companies/{companyId} {
       allow read: if signedIn();
-      allow write: if false;
+      allow create: if signedIn()
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.verified == false
+        && request.resource.data.rating == 0
+        && request.resource.data.reviewCount == 0
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 1;
+      allow update, delete: if false;
     }
 
     // الطلبات: يقرؤها المسجّلون (حتى تراها الشركات)، ولا تحتوي بيانات شخصية.
@@ -54,6 +62,24 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/requests/$(request.resource.data.requestId)).data.status == 'open'
         && get(/databases/$(database)/documents/requests/$(request.resource.data.requestId)).data.customerId
              == request.resource.data.customerId;
+
+      allow update, delete: if false;
+    }
+
+    // التقييمات: معرّف التقييم هو معرّف الطلب، ويقيّم صاحب الطلب بعد التسليم مرة واحدة.
+    match /ratings/{requestId} {
+      allow read: if signedIn();
+
+      allow create: if signedIn()
+        && request.resource.data.customerId == request.auth.uid
+        && request.resource.data.stars is int
+        && request.resource.data.stars >= 1 && request.resource.data.stars <= 5
+        && request.resource.data.comment is string
+        && request.resource.data.comment.size() <= 500
+        && get(/databases/$(database)/documents/requests/$(requestId)).data.customerId == request.auth.uid
+        && get(/databases/$(database)/documents/requests/$(requestId)).data.status == 'delivered'
+        && get(/databases/$(database)/documents/quotes/$(get(/databases/$(database)/documents/requests/$(requestId)).data.bookedQuoteId)).data.companyId
+             == request.resource.data.companyId;
 
       allow update, delete: if false;
     }

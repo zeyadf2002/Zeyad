@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/models.dart';
+import '../main.dart';
 import '../theme.dart';
 import 'request_screen.dart';
 
@@ -19,6 +20,9 @@ class CompanyProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final state = AppScope.of(context);
+    final company = state.companyById(this.company.id);
+    final reviews = state.ratingsFor(company.id);
     return Scaffold(
       appBar: AppBar(
         backgroundColor: AppColors.teal,
@@ -84,10 +88,26 @@ class CompanyProfileScreen extends StatelessWidget {
                 const SizedBox(height: 20),
                 const Text('آراء العملاء', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 10),
-                const AppCard(
-                  child: Text('تظهر هنا تقييمات العملاء بعد كل عملية تسليم.',
-                      style: TextStyle(color: AppColors.muted)),
-                ),
+                if (reviews.isEmpty)
+                  const AppCard(
+                    child: Text('تظهر هنا تقييمات العملاء بعد كل عملية تسليم.',
+                        style: TextStyle(color: AppColors.muted)),
+                  ),
+                for (final r in reviews.take(10)) ...[
+                  AppCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('★' * r.stars, style: const TextStyle(color: AppColors.amberDeep)),
+                        if (r.comment.isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Text(r.comment),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
                 const SizedBox(height: 24),
                 FilledButton(
                   onPressed: () => Navigator.of(context).push(MaterialPageRoute(

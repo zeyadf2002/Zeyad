@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../data/models.dart';
 import '../main.dart';
 import '../theme.dart';
+import 'company_signup_screen.dart';
 import 'widgets.dart';
 
 /// الشاشة ٦: وضع الشركة.
@@ -15,7 +16,7 @@ class CompanyModeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final state = AppScope.of(context);
     final company = state.myCompany;
-    if (company == null) return _NoCompany(onSwitchMode: onSwitchMode);
+    if (company == null) return CompanySignupScreen(onSwitchMode: onSwitchMode);
     final open = state.openRequestsForActiveCompany;
 
     return Scaffold(
@@ -176,53 +177,6 @@ class _RequestCardState extends State<_RequestCard> {
             child: const Text('أرسل العرض'),
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// المستخدم ليس صاحب شركة مسجّلة بعد.
-class _NoCompany extends StatelessWidget {
-  const _NoCompany({required this.onSwitchMode});
-
-  final VoidCallback onSwitchMode;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.night,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Icon(Icons.local_shipping_outlined, size: 56, color: AppColors.amber),
-              const SizedBox(height: 16),
-              const Text(
-                'حسابك غير مرتبط بشركة نقل بعد',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'بعد توثيق شركتك من الإدارة، يفتح لك هذا الوضع لاستقبال الطلبات وإرسال العروض.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Color(0xFFA8B0B8)),
-              ),
-              const SizedBox(height: 24),
-              OutlinedButton(
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.white,
-                  side: const BorderSide(color: Color(0xFFA8B0B8)),
-                ),
-                onPressed: onSwitchMode,
-                child: const Text('العودة إلى وضع العميل'),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

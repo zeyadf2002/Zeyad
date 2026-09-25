@@ -12,6 +12,7 @@ class FirestoreBackend implements Backend {
   CollectionReference<Map<String, dynamic>> get _companies => _db.collection('companies');
   CollectionReference<Map<String, dynamic>> get _requests => _db.collection('requests');
   CollectionReference<Map<String, dynamic>> get _quotes => _db.collection('quotes');
+  CollectionReference<Map<String, dynamic>> get _ratings => _db.collection('ratings');
 
   @override
   String newId() => _requests.doc().id;
@@ -21,6 +22,19 @@ class FirestoreBackend implements Backend {
       .where('verified', isEqualTo: true)
       .snapshots()
       .map((s) => [for (final d in s.docs) Company.fromMap(d.id, d.data())]);
+
+  @override
+  Stream<List<Company>> watchOwnedCompanies(String uid) => _companies
+      .where('ownerUid', isEqualTo: uid)
+      .snapshots()
+      .map((s) => [for (final d in s.docs) Company.fromMap(d.id, d.data())]);
+
+  @override
+  Stream<List<Rating>> watchRatings() => _ratings
+      .orderBy('createdAt', descending: true)
+      .limit(500)
+      .snapshots()
+      .map((s) => [for (final d in s.docs) Rating.fromMap(d.id, d.data())]);
 
   @override
   Stream<List<TransportRequest>> watchRequests() => _requests
@@ -47,4 +61,10 @@ class FirestoreBackend implements Backend {
 
   @override
   Future<void> saveQuote(Quote quote) => _quotes.doc(quote.id).set(quote.toMap());
+
+  @override
+  Future<void> saveCompany(Company company) => _companies.doc(company.id).set(company.toMap());
+
+  @override
+  Future<void> saveRating(Rating rating) => _ratings.doc(rating.requestId).set(rating.toMap());
 }

@@ -66,5 +66,17 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<!-- مطلوب لتسجيل الدخول برقم الجوال عبر Firebase (Encoded App ID) -->
+				<string>app-1-975237662849-ios-8282e538ac126c850ba580</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

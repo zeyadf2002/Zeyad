@@ -13,7 +13,7 @@
 npm install -g firebase-tools
 dart pub global activate flutterfire_cli
 firebase login
-flutterfire configure --project=naql
+flutterfire configure --project=naql-564f1
 ```
 الأمر الأخير يستبدل الملف `lib/firebase_options.dart` بإعدادات مشروعك.
 

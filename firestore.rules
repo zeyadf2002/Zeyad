@@ -1,0 +1,61 @@
+rules_version = '2';
+
+// قواعد حماية قاعدة البيانات لتطبيق نقل.
+// تُنشر بالأمر: firebase deploy --only firestore:rules
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function ownsCompany(companyId) {
+      return signedIn() &&
+        get(/databases/$(database)/documents/companies/$(companyId)).data.ownerUid == request.auth.uid;
+    }
+
+    // الشركات: يقرؤها كل مستخدم مسجّل. الإضافة والتوثيق من لوحة Firebase فقط.
+    match /companies/{companyId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    // الطلبات: يقرؤها المسجّلون (حتى تراها الشركات)، ولا تحتوي بيانات شخصية.
+    match /requests/{requestId} {
+      allow read: if signedIn();
+
+      allow create: if signedIn()
+        && request.resource.data.customerId == request.auth.uid
+        && request.resource.data.status == 'open'
+        && request.resource.data.bookedQuoteId == null;
+
+      // صاحب الطلب يحجز ويحدّث الحالة، والشركة المحجوزة تحدّث حالة النقل.
+      allow update: if signedIn()
+        && request.resource.data.customerId == resource.data.customerId
+        && (
+          resource.data.customerId == request.auth.uid ||
+          (resource.data.bookedQuoteId != null &&
+            ownsCompany(get(/databases/$(database)/documents/quotes/$(resource.data.bookedQuoteId)).data.companyId))
+        );
+
+      allow delete: if false;
+    }
+
+    // العروض: يراها صاحب الطلب والشركة التي أرسلتها فقط.
+    match /quotes/{quoteId} {
+      allow read: if signedIn() && (
+        resource.data.customerId == request.auth.uid ||
+        ownsCompany(resource.data.companyId)
+      );
+
+      allow create: if ownsCompany(request.resource.data.companyId)
+        && request.resource.data.price is int && request.resource.data.price > 0
+        && request.resource.data.days is int && request.resource.data.days > 0
+        && get(/databases/$(database)/documents/requests/$(request.resource.data.requestId)).data.status == 'open'
+        && get(/databases/$(database)/documents/requests/$(request.resource.data.requestId)).data.customerId
+             == request.resource.data.customerId;
+
+      allow update, delete: if false;
+    }
+  }
+}

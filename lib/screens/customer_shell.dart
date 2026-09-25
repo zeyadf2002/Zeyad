@@ -7,9 +7,12 @@ import 'my_requests_screen.dart';
 
 /// واجهة العميل مع الشريط السفلي.
 class CustomerShell extends StatefulWidget {
-  const CustomerShell({super.key, required this.onSwitchMode});
+  const CustomerShell({super.key, required this.onSwitchMode, this.onSignOut});
 
   final VoidCallback onSwitchMode;
+
+  /// غير متاح في وضع التجربة.
+  final VoidCallback? onSignOut;
 
   @override
   State<CustomerShell> createState() => _CustomerShellState();
@@ -24,7 +27,7 @@ class _CustomerShellState extends State<CustomerShell> {
       const HomeScreen(),
       const MyRequestsScreen(),
       const CompaniesScreen(),
-      _AccountPage(onSwitchMode: widget.onSwitchMode),
+      _AccountPage(onSwitchMode: widget.onSwitchMode, onSignOut: widget.onSignOut),
     ];
     return Scaffold(
       body: SafeArea(child: pages[_tab]),
@@ -45,9 +48,10 @@ class _CustomerShellState extends State<CustomerShell> {
 }
 
 class _AccountPage extends StatelessWidget {
-  const _AccountPage({required this.onSwitchMode});
+  const _AccountPage({required this.onSwitchMode, this.onSignOut});
 
   final VoidCallback onSwitchMode;
+  final VoidCallback? onSignOut;
 
   @override
   Widget build(BuildContext context) {
@@ -65,6 +69,17 @@ class _AccountPage extends StatelessWidget {
             onTap: onSwitchMode,
           ),
         ),
+        if (onSignOut != null) ...[
+          const SizedBox(height: 12),
+          AppCard(
+            child: ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.logout, color: AppColors.muted),
+              title: const Text('تسجيل الخروج', style: TextStyle(fontWeight: FontWeight.w600)),
+              onTap: onSignOut,
+            ),
+          ),
+        ],
       ],
     );
   }
